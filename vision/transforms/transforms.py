@@ -113,6 +113,91 @@ class Resize(object):
                                  self.size))
         return image, boxes, labels
 
+class ZeroPadImage(object):
+    def __call__(self, image, boxes=None, labels=None):
+        height, width, channels = image.shape
+        padded_boxes = []
+        if height > width:
+            img = cv2.copyMakeBorder(image, 0, 0, int((height-width)/2), int((height-width)/2), cv2.BORDER_CONSTANT)
+            boxes[:, 0] += int((height-width)/2)
+        else:
+            img = cv2.copyMakeBorder(image, int((width-height)/2), int((width-height)/2), 0, 0, cv2.BORDER_CONSTANT)
+            boxes[:, 2] += int((width-height)/2)
+        return img, padded_boxes
+    
+class RandomRotate(object):
+    '''
+    Documentation removed from helper functions but can be found here:
+    https://github.com/wang-tf/pascal_voc_tools/blob/master/pascal_voc_tools/Augmenter/bbox_util.py
+    '''
+    def __call__(self, image, boxes=None, labels=None):
+        angle = np.random.randint(0,4)*90 # 0, 90, 180, 270
+        corners = self.get_corners(boxes)
+        height, width, channels = image.shape
+        boxes = self.rotate_box(corners, angle, width/2, height/2, height, width)
+        boxes = self.get_enclosing_box(boxes)
+        if angle == 90:
+            img = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        elif angle == 180:
+            img = cv2.rotate(image, cv2.ROTATE_180)
+        elif angle == 270:
+            img = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+        return img, boxes
+    
+    def get_enclosing_box(self, corners):
+        x_ = corners[:, [0, 2, 4, 6]]
+        y_ = corners[:, [1, 3, 5, 7]]
+
+        xmin = np.min(x_, 1).reshape(-1, 1)
+        ymin = np.min(y_, 1).reshape(-1, 1)
+        xmax = np.max(x_, 1).reshape(-1, 1)
+        ymax = np.max(y_, 1).reshape(-1, 1)
+
+        final = np.hstack((xmin, ymin, xmax, ymax, corners[:, 8:]))
+
+        return final
+
+    def get_corners(self, bboxes):
+        width = (bboxes[:, 2] - bboxes[:, 0]).reshape(-1, 1)
+        height = (bboxes[:, 3] - bboxes[:, 1]).reshape(-1, 1)
+
+        x1 = bboxes[:, 0].reshape(-1, 1)
+        y1 = bboxes[:, 1].reshape(-1, 1)
+
+        x2 = x1 + width
+        y2 = y1
+
+        x3 = x1
+        y3 = y1 + height
+
+        x4 = bboxes[:, 2].reshape(-1, 1)
+        y4 = bboxes[:, 3].reshape(-1, 1)
+
+        corners = np.hstack((x1, y1, x2, y2, x3, y3, x4, y4))
+
+        return corners
+
+    def rotate_box(self, corners, angle, cx, cy, h, w):
+        corners = corners.reshape(-1, 2)
+        corners = np.hstack(
+            (corners, np.ones((corners.shape[0], 1), dtype=type(corners[0][0]))))
+
+        M = cv2.getRotationMatrix2D((cx, cy), angle, 1.0)
+
+        cos = np.abs(M[0, 0])
+        sin = np.abs(M[0, 1])
+
+        nW = int((h * sin) + (w * cos))
+        nH = int((h * cos) + (w * sin))
+        # adjust the rotation matrix to take into account translation
+        M[0, 2] += (nW / 2) - cx
+        M[1, 2] += (nH / 2) - cy
+        # Prepare the vector to be transformed
+        calculated = np.dot(M, corners.T).T
+
+        calculated = calculated.reshape(-1, 8)
+
+        return calculated
 
 class RandomSaturation(object):
     def __init__(self, lower=0.5, upper=1.5):

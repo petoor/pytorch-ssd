@@ -11,11 +11,13 @@ class TrainAugmentation:
         self.mean = mean
         self.size = size
         self.augment = Compose([
+            ZeroPadImage(),
             ConvertFromInts(),
             PhotometricDistort(),
             Expand(self.mean),
             RandomSampleCrop(),
             RandomMirror(),
+            RandomRotate(),
             ToPercentCoords(),
             Resize(self.size),
             SubtractMeans(self.mean),
@@ -37,6 +39,7 @@ class TrainAugmentation:
 class TestTransform:
     def __init__(self, size, mean=0.0, std=1.0):
         self.transform = Compose([
+            ZeroPadImage(),
             ToPercentCoords(),
             Resize(size),
             SubtractMeans(mean),
