@@ -116,14 +116,13 @@ class Resize(object):
 class ZeroPadImage(object):
     def __call__(self, image, boxes=None, labels=None):
         height, width, channels = image.shape
-        padded_boxes = []
         if height > width:
             image = cv2.copyMakeBorder(image, 0, 0, int((height-width)/2), int((height-width)/2), cv2.BORDER_CONSTANT)
             boxes[:, 0] += int((height-width)/2)
         else:
             image = cv2.copyMakeBorder(image, int((width-height)/2), int((width-height)/2), 0, 0, cv2.BORDER_CONSTANT)
             boxes[:, 2] += int((width-height)/2)
-        return image, padded_boxes, labels
+        return image, boxes, labels
     
 class RandomRotate(object):
     '''
