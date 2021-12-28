@@ -118,12 +118,12 @@ class ZeroPadImage(object):
         height, width, channels = image.shape
         padded_boxes = []
         if height > width:
-            img = cv2.copyMakeBorder(image, 0, 0, int((height-width)/2), int((height-width)/2), cv2.BORDER_CONSTANT)
+            image = cv2.copyMakeBorder(image, 0, 0, int((height-width)/2), int((height-width)/2), cv2.BORDER_CONSTANT)
             boxes[:, 0] += int((height-width)/2)
         else:
-            img = cv2.copyMakeBorder(image, int((width-height)/2), int((width-height)/2), 0, 0, cv2.BORDER_CONSTANT)
+            image = cv2.copyMakeBorder(image, int((width-height)/2), int((width-height)/2), 0, 0, cv2.BORDER_CONSTANT)
             boxes[:, 2] += int((width-height)/2)
-        return img, padded_boxes
+        return image, padded_boxes, labels
     
 class RandomRotate(object):
     '''
@@ -142,7 +142,7 @@ class RandomRotate(object):
             img = cv2.rotate(image, cv2.ROTATE_180)
         elif angle == 270:
             img = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
-        return img, boxes
+        return image, boxes, labels
     
     def get_enclosing_box(self, corners):
         x_ = corners[:, [0, 2, 4, 6]]
