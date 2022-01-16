@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import types
 from numpy import random
-
+import pdb
 
 def intersect(box_a, box_b):
     max_xy = np.minimum(box_a[:, 2:], box_b[2:])
@@ -110,18 +110,16 @@ class Resize(object):
 
     def __call__(self, image, boxes=None, labels=None):
         image = cv2.resize(image, (self.size,
-                                 self.size))
+                                   self.size))
         return image, boxes, labels
 
 class ZeroPadImage(object):
     def __call__(self, image, boxes=None, labels=None):
         height, width, channels = image.shape
         if height > width:
-            image = cv2.copyMakeBorder(image, 0, 0, int((height-width)/2), int((height-width)/2), cv2.BORDER_CONSTANT)
-            boxes[:, 0] += int((height-width)/2)
+            image = cv2.copyMakeBorder(image, 0, 0, 0, int(height-width), cv2.BORDER_CONSTANT)
         else:
-            image = cv2.copyMakeBorder(image, int((width-height)/2), int((width-height)/2), 0, 0, cv2.BORDER_CONSTANT)
-            boxes[:, 2] += int((width-height)/2)
+            image = cv2.copyMakeBorder(image, 0, int(width-height), 0, 0, cv2.BORDER_CONSTANT)
         return image, boxes, labels
     
 class RandomRotate(object):
@@ -136,11 +134,12 @@ class RandomRotate(object):
         boxes = self.rotate_box(corners, angle, width/2, height/2, height, width)
         boxes = self.get_enclosing_box(boxes)
         if angle == 90:
-            img = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
         elif angle == 180:
-            img = cv2.rotate(image, cv2.ROTATE_180)
+            image = cv2.rotate(image, cv2.ROTATE_180)
         elif angle == 270:
-            img = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+            image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+        boxes = np.float32(boxes)
         return image, boxes, labels
     
     def get_enclosing_box(self, corners):
@@ -151,9 +150,7 @@ class RandomRotate(object):
         ymin = np.min(y_, 1).reshape(-1, 1)
         xmax = np.max(x_, 1).reshape(-1, 1)
         ymax = np.max(y_, 1).reshape(-1, 1)
-
         final = np.hstack((xmin, ymin, xmax, ymax, corners[:, 8:]))
-
         return final
 
     def get_corners(self, bboxes):
@@ -173,7 +170,6 @@ class RandomRotate(object):
         y4 = bboxes[:, 3].reshape(-1, 1)
 
         corners = np.hstack((x1, y1, x2, y2, x3, y3, x4, y4))
-
         return corners
 
     def rotate_box(self, corners, angle, cx, cy, h, w):
@@ -471,23 +467,17 @@ class SwapChannels(object):
 class PhotometricDistort(object):
     def __init__(self):
         self.pd = [
-            RandomContrast(),  # RGB
             ConvertColor(current="RGB", transform='HSV'),  # HSV
             RandomSaturation(),  # HSV
             RandomHue(),  # HSV
             ConvertColor(current='HSV', transform='RGB'),  # RGB
-            RandomContrast()  # RGB
         ]
         self.rand_brightness = RandomBrightness()
-        self.rand_light_noise = RandomLightingNoise()
 
     def __call__(self, image, boxes, labels):
         im = image.copy()
         im, boxes, labels = self.rand_brightness(im, boxes, labels)
-        if random.randint(2):
-            distort = Compose(self.pd[:-1])
-        else:
-            distort = Compose(self.pd[1:])
+        distort = Compose(self.pd)
         im, boxes, labels = distort(im, boxes, labels)
-        return self.rand_light_noise(im, boxes, labels)
+        return im, boxes, labels
 

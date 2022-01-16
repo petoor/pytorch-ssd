@@ -45,6 +45,9 @@ parser.add_argument('--freeze-net', action='store_true',
                     help="Freeze all the layers except the prediction head.")
 parser.add_argument('--mb2-width-mult', default=1.0, type=float,
                     help='Width Multiplifier for MobilenetV2')
+parser.add_argument('--save_epoch', default=1, type=int,
+                    help='Saves model with this epoch interval')
+
 
 # Params for loading pretrained basenet or checkpoints.
 parser.add_argument('--base-net', help='Pretrained base model')
@@ -315,8 +318,7 @@ if __name__ == '__main__':
     # define loss function and optimizer
     criterion = MultiboxLoss(config.priors, iou_threshold=0.5, neg_pos_ratio=3,
                              center_variance=0.1, size_variance=0.2, device=DEVICE)
-    optimizer = torch.optim.SGD(params, lr=args.lr, momentum=args.momentum,
-                                weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(params, lr=args.lr)#, momentum=args.momentum, weight_decay=args.weight_decay)
     logging.info(f"Learning rate: {args.lr}, Base net learning rate: {base_net_lr}, "
                  + f"Extra Layers learning rate: {extra_layers_lr}.")
 
@@ -324,11 +326,11 @@ if __name__ == '__main__':
     if args.scheduler == 'multi-step':
         logging.info("Uses MultiStepLR scheduler.")
         milestones = [int(v.strip()) for v in args.milestones.split(",")]
-        scheduler = MultiStepLR(optimizer, milestones=milestones,
-                                                     gamma=0.1, last_epoch=last_epoch)
+        scheduler = MultiStepLR(optimizer, milestones=[0.98,0.99],
+                                                     gamma=0.1, last_epoch=-1)#last_epoch)
     elif args.scheduler == 'cosine':
         logging.info("Uses CosineAnnealingLR scheduler.")
-        scheduler = CosineAnnealingLR(optimizer, args.t_max, last_epoch=last_epoch)
+        scheduler = CosineAnnealingLR(optimizer, 1, last_epoch=-1)
     else:
         logging.fatal(f"Unsupported Scheduler: {args.scheduler}.")
         parser.print_help(sys.stderr)
@@ -351,7 +353,8 @@ if __name__ == '__main__':
                 f"Validation Classification Loss: {val_classification_loss:.4f}"
             )
             model_path = os.path.join(args.checkpoint_folder, f"{args.net}-Epoch-{epoch}-Loss-{val_loss}.pth")
-            net.save(model_path)
-            logging.info(f"Saved model {model_path}")
+            if epoch % args.save_epoch == 0:
+                net.save(model_path)
+                logging.info(f"Saved model {model_path}")
 
     logging.info("Task done, exiting program.")
