@@ -12,14 +12,14 @@ class TrainAugmentation:
         self.size = size
         self.augment = Compose([
             ZeroPadImage(),
-            #RandomRotate(),
+            RandomRotate(),
             ConvertFromInts(),
             PhotometricDistort(),
             #Expand(self.mean),
-            #RandomSampleCrop(),
-            #RandomMirror(),
+            RandomSampleCrop(),
+            RandomMirror(),
             ToPercentCoords(),
-            Resize(self.size),
+            Resize(w=300, h=300),
             SubtractMeans(self.mean),
             lambda img, boxes=None, labels=None: (img / std, boxes, labels),
             ToTensor(),
@@ -40,9 +40,9 @@ class TestTransform:
     def __init__(self, size, mean=0.0, std=1.0):
         self.transform = Compose([
             ZeroPadImage(),
-            #RandomRotate(),
+            RandomRotate(),
             ToPercentCoords(),
-            Resize(size),
+            Resize(w=300, h=300),
             SubtractMeans(mean),
             lambda img, boxes=None, labels=None: (img / std, boxes, labels),
             ToTensor(),

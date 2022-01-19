@@ -103,16 +103,6 @@ class ToPercentCoords(object):
 
         return image, boxes, labels
 
-
-class Resize(object):
-    def __init__(self, size=300):
-        self.size = size
-
-    def __call__(self, image, boxes=None, labels=None):
-        image = cv2.resize(image, (self.size,
-                                   self.size))
-        return image, boxes, labels
-
 class ZeroPadImage(object):
     def __call__(self, image, boxes=None, labels=None):
         height, width, channels = image.shape
@@ -121,7 +111,7 @@ class ZeroPadImage(object):
         else:
             image = cv2.copyMakeBorder(image, 0, int(width-height), 0, 0, cv2.BORDER_CONSTANT)
         return image, boxes, labels
-    
+
 class RandomRotate(object):
     '''
     Documentation removed from helper functions but can be found here:
@@ -481,3 +471,11 @@ class PhotometricDistort(object):
         im, boxes, labels = distort(im, boxes, labels)
         return im, boxes, labels
 
+class Resize(object):
+    def __init__(self, w=320, h=240):
+        self.w = w
+        self.h = h
+
+    def __call__(self, image, boxes=None, labels=None):
+        image = cv2.resize(image, (self.w,self.h))
+        return image, boxes, labels
